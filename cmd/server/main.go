@@ -15,8 +15,9 @@ func main() {
 
 	signal.Notify(sig)
 	httpError := make(chan error)
-	go http.ServeHTTP(":8080", port.Get, port.Add, httpError)
 	
+	go http.ServeHTTP(":8080", port.Get, port.Add, httpError)
+
 	select {
 	case err := <-httpError:
 		log.Fatalf("http server failed : %v", err)

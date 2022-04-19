@@ -11,7 +11,7 @@ import (
 
 func main() {
 	fmt.Println("serving bankruptcy")
-	sig := make(chan os.Signal)
+	sig := make(chan os.Signal, 1)
 
 	signal.Notify(sig)
 	httpError := make(chan error)

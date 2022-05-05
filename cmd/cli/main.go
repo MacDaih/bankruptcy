@@ -4,6 +4,7 @@ import (
 	"bankruptcy/internal/port"
 	"bankruptcy/internal/repository"
 	"bankruptcy/internal/service"
+	"bankruptcy/pkg/store"
 	"flag"
 	"fmt"
 )
@@ -28,9 +29,18 @@ func main() {
 	}
 	cmd := flag.Args()
 
+	f, err := store.GetFile(DB_PATH, DB)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer f.Close()
+
 	cli := port.NewCli(
-		service.RegisterTransactionFunc(repository.RegisterTransactionFunc(DB_PATH, DB)),
-		service.ReadTransactionsFunc(repository.ReadTransactionsFunc(DB_PATH, DB)),
+		service.RegisterTransactionFunc(repository.RegisterTransactionFunc(f)),
+		service.ReadTransactionsFunc(repository.ReadTransactionsFunc(f)),
 	)
 	switch cmd[0] {
 	case GET:

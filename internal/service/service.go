@@ -1,24 +1,18 @@
 package service
 
 import (
-	"bankruptcy/internal/core"
-	"bankruptcy/internal/repository"
-	"time"
+	"bankruptcy/internal/core/adapter"
+	"bankruptcy/internal/core/domain"
 )
 
-type TransactionService struct {
-	Repository *repository.TransactionRepo
-}
-
-func NewTransactionService(repository *repository.TransactionRepo) TransactionService {
-	return TransactionService{
-		Repository: repository,
+func RegisterTransactionFunc(r adapter.RegisterTransactionRepo) adapter.RegisterTransaction {
+	return func(trs domain.Transaction) error {
+		return r(trs)
 	}
 }
 
-func (srv *TransactionService) Store(in float64) error {
-	return srv.Repository.AppendTransaction(core.Transaction{
-		Date:   time.Now(),
-		Amount: in,
-	})
+func ReadTransactionsFunc(r adapter.ReadTransactionsRepo) adapter.ReadTransactions {
+	return func() (domain.Group, error) {
+		return r()
+	}
 }

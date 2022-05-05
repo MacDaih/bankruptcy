@@ -1,72 +1,58 @@
 package repository
 
 import (
-	"bankruptcy/internal/core"
+	"bankruptcy/internal/core/adapter"
+	"bankruptcy/internal/core/domain"
 	"encoding/json"
 	"os"
 )
 
-type TransactionRepo struct {
-	path string
-	file string
-}
+func RegisterTransactionFunc(fs *os.File) adapter.RegisterTransactionRepo {
+	return func(trs domain.Transaction) error {
+		size, _ := fs.Stat()
+		buf := make([]byte, size.Size())
+		fs.Read(buf)
+		if len(buf) == 0 {
+			first, err := json.Marshal(domain.Group{
+				Transactions: []domain.Transaction{trs},
+			})
+			if err != nil {
+				return err
+			}
+			_, err = fs.Write(first)
+			return err
+		}
 
-func NewTransactionRepo(path string, file string) *TransactionRepo {
-	return &TransactionRepo{
-		path: path,
-		file: file,
-	}
-}
+		var g *domain.Group
+		err := json.Unmarshal(buf, &g)
 
-func createStore(path string) error {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		err = os.Mkdir(path, 0755)
-		return err
-	}
-	return nil
-}
-
-func (t *TransactionRepo) AppendTransaction(trs core.Transaction) error {
-
-	if err := createStore(t.path); err != nil {
-		return err
-	}
-
-	fs, err := os.OpenFile(t.path+t.file, os.O_RDWR|os.O_CREATE, 0755)
-
-	if err != nil {
-		return err
-	}
-
-	size, _ := fs.Stat()
-	buf := make([]byte, size.Size())
-	fs.Read(buf)
-	if len(buf) == 0 {
-		first, err := json.Marshal(core.Group{
-			Transactions: []core.Transaction{trs},
-		})
 		if err != nil {
 			return err
 		}
-		_, err = fs.Write(first)
-		return err
+		g.Transactions = append(g.Transactions, trs)
+		b, err := json.Marshal(&g)
+		if err != nil {
+			return err
+		}
+		_, err = fs.WriteAt(b, 0)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
+}
 
-	var g *core.Group
-	err = json.Unmarshal(buf, &g)
+func ReadTransactionsFunc(fs *os.File) adapter.ReadTransactionsRepo {
+	return func() (domain.Group, error) {
+		size, _ := fs.Stat()
 
-	if err != nil {
-		return err
+		buf := make([]byte, size.Size())
+
+		fs.Read(buf)
+
+		var g domain.Group
+		err := json.Unmarshal(buf, &g)
+
+		return g, err
 	}
-	g.Transactions = append(g.Transactions, trs)
-	b, err := json.Marshal(&g)
-	if err != nil {
-		return err
-	}
-	_, err = fs.WriteAt(b, 0)
-	if err != nil {
-		return err
-	}
-	return nil
 }
